@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:video_player_win/video_player_win.dart';
 //import 'package:video_player_win/video_player_win.dart';
 
 //typedef VideoPlayerController = WinVideoPlayerController;
@@ -43,7 +42,8 @@ class _MyAppState extends State<MyApp> {
 
   void reload() {
     controller?.dispose();
-    controller = VideoPlayerController.file(File("D:\\test\\test_4k.mp4"));
+    controller = VideoPlayerController.file(
+        File("C:\\Users\\m\\Downloads\\encoded-av1.mp4"));
     //controller = VideoPlayerController.file(File("C:\\Downloads\\FDM\\big-buck-bunny_trailer-.webm"));
     //controller = VideoPlayerController.networkUrl(Uri.parse("https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"));
 

@@ -3,7 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  fullscreen_window
+  desktop_multi_window
   video_player_win
 )
 
