@@ -41,7 +41,7 @@ public:
 
 	LONGLONG GetDuration();
 	LONGLONG GetCurrentPosition();
-	HRESULT Seek(LONGLONG ms);
+	HRESULT Seek(LONGLONG ms, bool playAfterSeek = false);
 	SIZE GetVideoSize();
 
 	HRESULT SetPlaybackSpeed(float fRate);
@@ -86,6 +86,7 @@ private:
 	BOOL m_isEnded = FALSE;
 	HANDLE m_playingEvent = NULL; // win32 event
 	LONGLONG m_seekingToPts = -1; // seeking pts if seeking
+	ULONGLONG m_seekDeadline = 0; // seek scrub timeout (GetTickCount64)
 	bool m_isShutdown;
 
     MFVideoNormalizedRect m_frameRectSrc = {};

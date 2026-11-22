@@ -1,5 +1,4 @@
 import 'dart:developer';
-import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -89,10 +88,13 @@ class MethodChannelVideoPlayerWin extends VideoPlayerWinPlatform {
   }
 
   @override
-  Future<void> seekTo(int textureId, int ms) async {
-    // TODO: will auto play after seek, it seems there is no way to seek without playing in windows media foundation API...
-    await methodChannel
-        .invokeMethod<bool>('seekTo', {"textureId": textureId, "ms": ms});
+  Future<void> seekTo(int textureId, int ms,
+      {bool playAfterSeek = false}) async {
+    await methodChannel.invokeMethod<bool>('seekTo', {
+      "textureId": textureId,
+      "ms": ms,
+      "playAfterSeek": playAfterSeek,
+    });
   }
 
   @override

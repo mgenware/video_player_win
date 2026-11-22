@@ -13,6 +13,10 @@
 #define NO_FRAME -2
 #define TAG "[video_player_win][native] "
 
+// How long a paused seek may keep polling for the frame at its target before
+// giving up (for example when seeking to the very end of the stream).
+static constexpr ULONGLONG kSeekTimeoutMs = 1000;
+
 #define CHECK_HR(x) if (FAILED(x)) { goto done; }
 //#define CHECK_HR(x) if (FAILED(x)) { std::cout << TAG "CHECK_HR() failed: hr=" << hr << ", at " << __FUNCTION__ << "():" << __LINE__ << std::endl; goto done; } // debug
 
@@ -139,6 +143,8 @@ HRESULT MyPlayer::EventNotify(DWORD event, DWORD_PTR param1, DWORD param2)
         case MF_MEDIA_ENGINE_EVENT_PLAYING:
             m_isPlaying = TRUE;
             m_isEnded = FALSE;
+            m_seekingToPts = -1;
+            m_seekDeadline = 0;
             SetEvent(m_playingEvent);
             break;
         case MF_MEDIA_ENGINE_EVENT_ENDED:
@@ -152,9 +158,11 @@ HRESULT MyPlayer::EventNotify(DWORD event, DWORD_PTR param1, DWORD param2)
         case MF_MEDIA_ENGINE_EVENT_SEEKED:
             if (!m_isPlaying && m_hasVideo) // video scrubbing in pause state
             {
-                m_seekingToPts = -1;
-                ResetEvent(m_playingEvent);
-                updateFrame(); // TODO: seems not scrubbing during pause after seek...
+                // Keep m_seekingToPts: the video thread keeps polling
+                // OnVideoStreamTick until it receives the frame at the seek
+                // position (or the seek times out). Clearing it here would
+                // render the previous frame instead of the seek target.
+                SetEvent(m_playingEvent);
             }
             break;
 
@@ -347,21 +355,21 @@ LONGLONG MyPlayer::updateFrame()
             //std::cout << "OnVideoStreamTick() no new frame !!!!!" << std::endl;
         }
 
-        // video scrubbing: if seeking in pause state, loop until next frame found
+        // video scrubbing: keep polling (one frame per call) until the frame
+        // at the seek target is delivered or the seek times out
         if (!m_isPlaying && m_seekingToPts >= 0)
         {
             LONGLONG diffPts = pts - m_seekingToPts;
             if (diffPts < 0) diffPts = -diffPts;
-            if (bFound && diffPts < 10000*100)
+            bool reached = bFound && diffPts < 10000*100;
+            bool timedOut = GetTickCount64() >= m_seekDeadline;
+            if (reached || timedOut)
             {
-                m_seekingToPts = -1;                
+                m_seekingToPts = -1;
+                m_seekDeadline = 0;
                 ResetEvent(m_playingEvent); // pause video thread again
-                return -1;
             }
-            else
-            {
-                continue;
-            }
+            return -1;
         }
     } while (false);
 
@@ -392,18 +400,22 @@ LONGLONG MyPlayer::GetCurrentPosition()
     return (LONGLONG) (m_pEngine->GetCurrentTime() * 1000);
 }
 
-HRESULT MyPlayer::Seek(LONGLONG ms)
+HRESULT MyPlayer::Seek(LONGLONG ms, bool playAfterSeek)
 {
     if (!m_pEngine) return E_FAIL;
 
-    if (!m_isPlaying) 
+    if (!m_isPlaying && m_hasVideo)
     {
         // video scrubbing
         m_seekingToPts = ms * 10000;
+        m_seekDeadline = GetTickCount64() + kSeekTimeoutMs;
         SetEvent(m_playingEvent);
     }
-    //return m_pEngine->SetCurrentTime((double)ms / 1000);
-    if (m_isEnded) Play(); // Fix issue#44: seek() after ended, will play audio without video frames...
+    // Resuming playback here is only correct for the looping path (#44).
+    // Doing it on every seek after ENDED restarts the player at 0, which
+    // reaches the end again and emits ENDED, looping forever. That is what
+    // happens when video_player seeks to the duration on completion.
+    if (m_isEnded && playAfterSeek) Play();
     return m_pEngineEx->SetCurrentTimeEx((double)ms / 1000, MF_MEDIA_ENGINE_SEEK_MODE_APPROXIMATE );
 }
 

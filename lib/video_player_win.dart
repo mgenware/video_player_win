@@ -205,7 +205,9 @@ class WinVideoPlayerController extends ValueNotifier<WinVideoPlayerValue> {
       case 6: // MESessionEnded
         //log("[video_player_win] playback event: play ended");
         if (_isLooping) {
-          seekTo(Duration.zero);
+          // Resuming from the end is the only case where a seek must restart
+          // playback (see #44).
+          seekTo(Duration.zero, playAfterSeek: true);
         } else {
           _cancelTrackingPosition();
           value = value.copyWith(isCompleted: true, position: value.duration);
@@ -260,11 +262,14 @@ class WinVideoPlayerController extends ValueNotifier<WinVideoPlayerValue> {
     await VideoPlayerWinPlatform.instance.pause(textureId_);
   }
 
-  Future<void> seekTo(Duration time) async {
+  Future<void> seekTo(Duration time, {bool playAfterSeek = false}) async {
     if (!value.isInitialized) throw ArgumentError("video file not opened yet");
 
-    await VideoPlayerWinPlatform.instance
-        .seekTo(textureId_, time.inMilliseconds);
+    await VideoPlayerWinPlatform.instance.seekTo(
+      textureId_,
+      time.inMilliseconds,
+      playAfterSeek: playAfterSeek,
+    );
     value = value.copyWith(position: time, isCompleted: false);
   }
 

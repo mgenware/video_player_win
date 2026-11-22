@@ -50,7 +50,7 @@ abstract class VideoPlayerWinPlatform extends PlatformInterface {
     throw UnimplementedError('pause() has not been implemented.');
   }
 
-  Future<void> seekTo(int textureId, int ms) {
+  Future<void> seekTo(int textureId, int ms, {bool playAfterSeek = false}) {
     throw UnimplementedError('seekTo() has not been implemented.');
   }
 

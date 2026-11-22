@@ -1,3 +1,13 @@
+## 3.3.2
+
+* Fix: seeking no longer resumes playback after `ENDED` unless the caller asks
+  for it. This stops the endless final-frame replay caused by `video_player`
+  seeking to the duration on completion. The `Play()` workaround from #44 is
+  now limited to the looping path.
+* Fix: seeking while paused renders the frame at the requested position instead
+  of the previously displayed frame, and a seek that cannot reach its target
+  times out instead of blocking the video thread.
+
 ## 3.3.1
 
 * Fix playback of URLs longer than 1024 characters- #56

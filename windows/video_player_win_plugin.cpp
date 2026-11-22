@@ -12,6 +12,7 @@
 
 #include <memory>
 #include <sstream>
+#include <variant>
 
 #include "my_grabber_player.h"
 #include <dxgi.h>
@@ -437,7 +438,13 @@ void VideoPlayerWinPlugin::HandleMethodCall(
     result->Success(flutter::EncodableValue(true));
   } else if (method_call.method_name().compare("seekTo") == 0) {
     auto ms = std::get<int32_t>(arguments[flutter::EncodableValue("ms")]);
-    player->Seek(ms);
+    bool playAfterSeek = false;
+    auto playArg = arguments.find(flutter::EncodableValue("playAfterSeek"));
+    if (playArg != arguments.end() &&
+        std::holds_alternative<bool>(playArg->second)) {
+      playAfterSeek = std::get<bool>(playArg->second);
+    }
+    player->Seek(ms, playAfterSeek);
     result->Success(flutter::EncodableValue(true));
   } else if (method_call.method_name().compare("getCurrentPosition") == 0) {
     long ms = (long) player->GetCurrentPosition();
